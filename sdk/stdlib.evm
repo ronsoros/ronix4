@@ -12,19 +12,45 @@ function read(pipe, dest, len, maxtries);
 function selfpid();
 function strarr(array, string, delim);
 function strlen(str);
+function pipe_empty(pipe);
 function _start() { // executable entrypoint
 	stdin = selfpid() * 2;
 	stdout = selfpid() * 2 + 1;
 	$uf10(&args);
-	_kernel_puts(&args);
-	strarr(&argv, &args, " ");
+	//_kernel_puts(&args);
+	argc = strarr(&argv, &args, " ");
 	main();
-	$uf5();	
+	while ( !pipe_empty(stdout) ) {}
+	$uf5();
+}
+function setuid(pid, id) { // setuid for 'pid' to 'id'
+	$uf12(5, pid, id);
+}
+function getuid(pid) { // getuid for 'pid'
+	return $uf12(4, pid);
+}
+function pipe_empty(pipe) { // check if 'pipe' is empty
+	local ret;
+	ret = $uf12(3, pipe);
+	return ret;
+}
+function atoi(str) { // convert 'str' to number
+   local i;
+   local res; res = 0; 
+    // Iterate through all characters of input string and
+    // update result
+    for (i = 0; $ptr8u[str, i]; i++)
+        res = res*10 + $ptr8u[str, i] - 48;
+  
+    // return result.
+    return res;
+
 }
 function strarr(array, str, delim) { // split 'str' by 'delim' into 'array', returns number of elements in 'array'
 	local n, i, l;
 	n = 0;
 	l = 0;
+	$ptr16[array, n] = str;
 	for ( i = 0; $ptr8u[str, i]; i++ ) {
 		if ( $ptr8u[str, i] == $ptr8u[delim, 0] ) {
 			$ptr16[array, n] = str + l;
@@ -33,9 +59,12 @@ function strarr(array, str, delim) { // split 'str' by 'delim' into 'array', ret
 			l = i + 1;
 		}
 	}
-	return n;
+	return n + 1;
 }
-function strcmp(str1, str2) {
+function string(value) { // make a string
+	return value;
+}
+function strcmp(str1, str2) { // compare strings
 	local a, b, c, d;
 	c = 1; a = 0;
 	if ( strlen(str1) != strlen(str2) ) { return 1; }
@@ -85,10 +114,7 @@ function write(pipe, src, len) { // write data from 'src' 'len' characters into 
 	$uf9(pipe, src, len);
 }
 function fputs(pipe, str) { // write 'str' to 'pipe'
-	local i;
-	for ( i = 0; $ptr8u[str, i]; i++ ) {
-		fputc(pipe, $ptr8u[str, i]);
-	}
+	write(pipe, str, strlen(str));
 }
 function fgets(pipe, str) { // read line from 'pipe' into 'str'
 	local i, n;
@@ -178,9 +204,31 @@ function fwdio(pid) { // forward stdio to child 'pid'
 		write(cstdin, &scratch, 1);
 	}
 }
+function strcpy(dest, src) { // standard strcpy implementation
+	local i;
+	for(i=0; $ptr8u[src, i]; i++) {
+		$ptr8u[dest, i] = $ptr8u[src, i];
+	}
+	$ptr8u[dest, i] = 0;
+}
+function fputs_ex(pipe, s1, s2, s3, s4) { // join with spaces and print up to 4 strings
+	fputs(pipe, s1);
+	if(s2) { fputs(pipe, " "); fputs(pipe, s2); }
+	if(s3) { fputs(pipe, " "); fputs(pipe, s3); }
+	if(s4) { fputs(pipe, " "); fputs(pipe, s4); }
+	
+}
 function exec(path, argstr) { // replace current running process with program at 'path'
 	return $uf6(path, argstr);
 }
 function _kernel_info(dbuf) { // [syscall] get kernel information
 	return $uf2(dbuf);
+}
+array8u sys_hostname[32];
+function hostname() { // get system hostname
+	$uf12(1, &sys_hostname);
+	return &sys_hostname;
+}
+function sethostname(newhost) { // set system hostname
+	$uf12(2, newhost);
 }

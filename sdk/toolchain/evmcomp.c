@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 	char *prefix;
 	int prefix_len;
 
-	if (argc != 2 || *argv[1] == '-') {
+	if (argc == 1 || *argv[1] == '-') {
 abort_with_help_msg:
 		fprintf(stderr, "Usage: %s [filename].evm\n", argv[0]);
 		return 1;
@@ -34,9 +34,9 @@ abort_with_help_msg:
 
 	prefix = strdup(argv[1]);
 	prefix_len = strlen(prefix);
+	
+	
 
-	if (prefix_len < 5 || strcmp(".evm", prefix+prefix_len-4))
-		goto abort_with_help_msg;
 
 	yyin = fopen(prefix, "rt");
 	if (!yyin)

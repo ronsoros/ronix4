@@ -4,7 +4,9 @@ array8u buf[1];
 $include "sdk/stdlib.evm"
 
 function main() {
+	
 	local n, s, q, cstdin, cstdout;
+	_kernel_puts("Welcome to Ronsor!`");
 	s = fork();
 	cstdin = s * 2;
 	cstdout = s * 2 + 1;
@@ -21,6 +23,6 @@ function main() {
 		//_kernel_putc(65);
 	}
 	} else {
-	exec("app/sh.bin", "");
+	exec("bin/sh", "");
 	}
 }

@@ -2,10 +2,16 @@
 array8u text[64];
 $include "sdk/stdlib.evm"
 array16 arr[5];
+array8u user[32];
 function main() {
-	local c, q;
+		local c, q;
+	itoa(getuid(selfpid()), &user);
+	if ( getuid(selfpid()) == 1 ) {
+		strcpy(&user, "root");
+	}
+
 	while ( 1 ) {
-	fputs(stdout, "$ ");	
+	fputs_ex(stdout, &user, hostname(), "> ", 0);
 	fgets(stdin, &text);
 	if ( !strcmp(&text, "exit") ) {
 	fputs(stdout, "Exiting`");

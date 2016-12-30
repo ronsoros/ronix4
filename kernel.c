@@ -13,10 +13,12 @@ int curvm = 0;
 uint8_t vm_mem[MAX_PID][PROG_SZ] = { 0, };
 struct embedvm_s vmarrx[MAX_PID] = { 0, };
 struct embedvm_s *vmarr[MAX_PID];
+char hostname[32] = "default";
 char vm_pipes[MAX_PID * 2 + MAX_PIPE][PIPE_BUF];
 char *vm_args[MAX_PID] = { NULL, };
 int16_t vm_pipen[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t vm_pipex[MAX_PID * 2 + MAX_PIPE] = {0,};
+int16_t vm_uid[MAX_PID] = {32767, };
 int16_t mem_read(uint16_t addr, bool is16bit, void *ctx)
 {
 	if (addr + (is16bit ? 1 : 0) >= sizeof(vm_mem[curvm]))
@@ -54,6 +56,7 @@ int freepid() {
  }
 int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 {
+	//printf("%d: Syscall: %d ( %d, %d )\n", curvm, funcid, argc > 0 ? argv[0] : -1, argc > 1 ? argv[1] : -1);
 	if ( funcid == 0 && argc == 1 ) {
 	if ( argv[0] == '`' ) {
 	putchar(10);
@@ -83,6 +86,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		
 		memcpy(vm_mem[newpid], vm_mem[curvm], PROG_SZ);
 		vmarr[newpid] = &vmarrx[newpid];
+		vm_uid[newpid] = vm_uid[curvm];
 		//printf("FORK DONE\n");
 		fflush(stdout);
 		return newpid;
@@ -133,7 +137,12 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		char *str = strdup(&vm_mem[curvm][argv[0]]);
 		char *ptr = strchr(str, ' ');
 		if ( ptr ) *ptr = '\0';
-		FILE *fp = fopen(str, "r");
+		FILE *fp = fopen(str, "rb");
+		if ( !fp ) {
+		char str2[128];
+		sprintf(str2, "bin/%s", str);
+		fp = fopen(str2, "rb");
+		}
 		if ( fp ) {
 		uint16_t entrypoint = 0;
 		fread(&entrypoint, 1, 2, fp);
@@ -155,6 +164,28 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		if ( vm_args[curvm] != NULL ) {
 		strcpy(dest, vm_args[curvm]);
 		}
+	} else if ( funcid == 12 ) {
+		if ( argc > 0 ) {
+		switch(argv[0]) {
+			case 1: {
+				strcpy(&vm_mem[curvm][argv[1]], hostname); break; }
+			case 2: {
+				if ( vm_uid[curvm] == 1 ) {
+				strcpy(hostname, &vm_mem[curvm][argv[1]]); } 
+				break; }
+			case 3: {
+				return vm_pipen[argv[1]] == 0; break;
+			}
+			case 4: {
+				return vm_uid[argv[1]];
+			}
+			case 5: {
+				if ( vm_uid[curvm] == 1 ) {
+				vm_uid[argv[1]] = argv[2];
+				}
+			}
+		}
+		}
 	}
 	return 0;
 }
@@ -167,7 +198,7 @@ void setup(int argc, char **argv)
 	}
 	vmarr[0] = &vmarrx[0];
 	setbuf(stdout, NULL);
-	FILE *fp = fopen(argv[1], "r");
+	FILE *fp = fopen(argv[1], "rb");
 	uint16_t entrypoint = 0;
 	fread(&entrypoint, 1, 2, fp);
 	fread(vm_mem[0], 1, 4096, fp);
@@ -179,7 +210,7 @@ void setup(int argc, char **argv)
 	vm->mem_read = &mem_read;
 	vm->mem_write = &mem_write;
 	vm->call_user = &call_user;
-	
+	vm_uid[curvm] = 1;
 }
 
 void loop()

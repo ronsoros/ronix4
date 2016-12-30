@@ -1,4 +1,6 @@
 _start() - executable entrypoint
+strarr(array, str, delim) - split 'str' by 'delim' into 'array', returns number of elements in 'array'
+function strcmp(str1, str2) {
 exit() - exit application
 _kernel_putc(n) - [syscall] put character to terminal
 _kernel_getc() - [syscall] get character from terminal
@@ -16,5 +18,10 @@ reverse(s) - reverse 's'
 itoa(n, str) - convert number 'n' to string, store in 'str'
 fork() - create new process
 wait(pid) - wait for process 'pid' to die
-exec(path) - replace current running process with program at 'path'
+dead(pid) - check if process 'pid' is dead
+fwdio(pid) - forward stdio to child 'pid'
+fputs_ex(pipe, s1, s2, s3, s4) - join with spaces and print up to 4 strings
+exec(path, argstr) - replace current running process with program at 'path'
 _kernel_info(dbuf) - [syscall] get kernel information
+hostname() - get system hostname
+sethostname(newhost) - set system hostname
