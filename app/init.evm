@@ -21,6 +21,6 @@ function main() {
 		//_kernel_putc(65);
 	}
 	} else {
-	exec("app/sh.bin");
+	exec("app/sh.bin", "");
 	}
 }

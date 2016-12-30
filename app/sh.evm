@@ -3,16 +3,23 @@ array8u text[64];
 $include "sdk/stdlib.evm"
 array16 arr[5];
 function main() {
-	local c;
-	text[0] = 10;
-	write(stdout, "Test", 4);
-	write(stdout, "Blah", 4);
-	write(stdout, "More", 4);
-	fputs(stdout, "Hi World`");
+	local c, q;
 	while ( 1 ) {
-	fputs(stdout, "> ");	
+	fputs(stdout, "$ ");	
 	fgets(stdin, &text);
-	strarr(&arr, &text, " ");
-	fputs(stdout, arr[1]);
+	if ( !strcmp(&text, "exit") ) {
+	fputs(stdout, "Exiting`");
+	exit();
+	}
+	q = fork();
+	if ( q > 0 ) {
+		while ( !dead(q) ) { fwdio(q); }
+		
+	} else {
+		if ( exec(&text, &text) == -1 ) {
+		fputs(stdout, "Command not found`");
+		exit();
+		}
+	}
 	}
 }

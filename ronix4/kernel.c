@@ -7,11 +7,14 @@
 #define MAX_SOCK 16
 #define MAX_PIPE 8
 #define PIPE_BUF 64
+#define PROG_SZ 4096
 #define UNUSED __attribute__((unused))
 int curvm = 0;
-uint8_t vm_mem[MAX_PID][4*1024] = { 0, };
-struct embedvm_s *vmarr[MAX_PID] = { NULL, };
+uint8_t vm_mem[MAX_PID][PROG_SZ] = { 0, };
+struct embedvm_s vmarrx[MAX_PID] = { 0, };
+struct embedvm_s *vmarr[MAX_PID];
 char vm_pipes[MAX_PID * 2 + MAX_PIPE][PIPE_BUF];
+char *vm_args[MAX_PID] = { NULL, };
 int16_t vm_pipen[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t vm_pipex[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t mem_read(uint16_t addr, bool is16bit, void *ctx)
@@ -68,7 +71,8 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 	} else if ( funcid == 3 ) {
 		// let's fork
 		int newpid = freepid();
-		struct embedvm_s* nvm = (struct embedvm_s*)calloc(1, sizeof(struct embedvm_s));
+		//printf("FORK: %d\n", newpid);
+		struct embedvm_s* nvm = &vmarrx[newpid];
 		nvm->ip = vmarr[curvm]->ip + 2;
 		nvm->sp = vmarr[curvm]->sp;
 		nvm->sfp = vmarr[curvm]->sfp;
@@ -76,13 +80,14 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		nvm->mem_write = &mem_write;
 		nvm->call_user = &call_user;
 		//printf("FORK! %d\n", newpid);
-		memcpy(vm_mem[newpid], vm_mem[curvm], 4096);
-		vmarr[newpid] = nvm;
+		
+		memcpy(vm_mem[newpid], vm_mem[curvm], PROG_SZ);
+		vmarr[newpid] = &vmarrx[newpid];
+		//printf("FORK DONE\n");
+		fflush(stdout);
 		return newpid;
 	} else if ( funcid == 4 ) {
-		if ( vmarr[argv[0]] != NULL ) {
-		vmarr[curvm]->ip -= 4;
-		}
+		return vmarr[argv[0]] == NULL;
 	} else if ( funcid == 7 ) {
 		return curvm;
 	} else if ( funcid == 8 ) {
@@ -124,35 +129,57 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		
 		return ret;
 	} else if ( funcid == 6 ) {
-		char *str = &vm_mem[curvm][argv[0]];
+		vm_args[curvm] = strdup(&vm_mem[curvm][argv[1]]);
+		char *str = strdup(&vm_mem[curvm][argv[0]]);
+		char *ptr = strchr(str, ' ');
+		if ( ptr ) *ptr = '\0';
 		FILE *fp = fopen(str, "r");
+		if ( fp ) {
 		uint16_t entrypoint = 0;
 		fread(&entrypoint, 1, 2, fp);
 		fread(vm_mem[curvm], 1, 4096, fp);
 		fclose(fp);
 		vmarr[curvm]->ip = entrypoint - 4;
+		} else {
+		free(str);
+		return -1;
+		}
+		free(str);
 	} else if ( funcid == 5 ) {
+		
 		vmarr[curvm] = NULL;
+		free(vm_args[curvm]);
+	} else if ( funcid == 10 ) {
+
+		char *dest = &vm_mem[curvm][argv[0]];
+		if ( vm_args[curvm] != NULL ) {
+		strcpy(dest, vm_args[curvm]);
+		}
 	}
 	return 0;
 }
 
 void setup(int argc, char **argv)
 {
+	int q = 0;
+	for ( q = 0; q < MAX_PID; q++ ) {
+		vmarr[q] = NULL;
+	}
+	vmarr[0] = &vmarrx[0];
 	setbuf(stdout, NULL);
 	FILE *fp = fopen(argv[1], "r");
 	uint16_t entrypoint = 0;
 	fread(&entrypoint, 1, 2, fp);
 	fread(vm_mem[0], 1, 4096, fp);
 	fclose(fp);
-	struct embedvm_s* vm = (struct embedvm_s*)calloc(1, sizeof(struct embedvm_s));
+	struct embedvm_s* vm = vmarr[0];
 	vm->ip = entrypoint;
 	printf("Starting kernel: init entrypoint: 0x%04x\n", entrypoint);
 	vm->sp = vm->sfp = sizeof(vm_mem[curvm]);
 	vm->mem_read = &mem_read;
 	vm->mem_write = &mem_write;
 	vm->call_user = &call_user;
-	vmarr[0] = vm;
+	
 }
 
 void loop()

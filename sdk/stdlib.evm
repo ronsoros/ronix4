@@ -1,17 +1,23 @@
 // standard library
 array8u scratch[1];
+array8u args[64];
 array16 argv[8];
 global argc;
 global stdin;
 global stdout;
+function _kernel_puts(str);
 function main();
 function write(pipe, src, len);
 function read(pipe, dest, len, maxtries);
 function selfpid();
 function strarr(array, string, delim);
+function strlen(str);
 function _start() { // executable entrypoint
 	stdin = selfpid() * 2;
 	stdout = selfpid() * 2 + 1;
+	$uf10(&args);
+	_kernel_puts(&args);
+	strarr(&argv, &args, " ");
 	main();
 	$uf5();	
 }
@@ -28,6 +34,16 @@ function strarr(array, str, delim) { // split 'str' by 'delim' into 'array', ret
 		}
 	}
 	return n;
+}
+function strcmp(str1, str2) {
+	local a, b, c, d;
+	c = 1; a = 0;
+	if ( strlen(str1) != strlen(str2) ) { return 1; }
+	while ( a < strlen(str1) ) {
+		if ( $ptr8u[str1, a] != $ptr8u[str2, a] ) { return 1; }
+		a++;
+	}
+	return 0;
 }
 function exit() { // exit application
 	$uf5();
@@ -140,14 +156,30 @@ function itoa(n, str) { // convert number 'n' to string, store in 'str'
 function fork() { // create new process
 	
 	local q;
+	q = 0;
 	q = $uf3();
 	return q;
 }
 function wait(pid) { // wait for process 'pid' to die
-	$uf4(pid);
+	while (!$uf4(pid)) {}
 }
-function exec(path) { // replace current running process with program at 'path'
-	$uf6(path);
+function dead(pid) { // check if process 'pid' is dead
+	return $uf4(pid);
+}
+function fwdio(pid) { // forward stdio to child 'pid'
+	local cstdin, cstdout;
+	cstdin = pid * 2;
+	cstdout = pid * 2 + 1;
+	if($uf8(cstdout, &scratch, 1)) {
+		write(stdout, &scratch, 1);
+		
+	}
+	if($uf8(stdin, &scratch, 1)) {
+		write(cstdin, &scratch, 1);
+	}
+}
+function exec(path, argstr) { // replace current running process with program at 'path'
+	return $uf6(path, argstr);
 }
 function _kernel_info(dbuf) { // [syscall] get kernel information
 	return $uf2(dbuf);
