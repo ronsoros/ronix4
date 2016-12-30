@@ -1,7 +1,7 @@
 // The Ronsor Again Shell (Rash) (C) 2015, 2016, 2017 Ronsor.
 array8u text[64];
 $include "sdk/stdlib.evm"
-
+array16 arr[5];
 function main() {
 	local c;
 	text[0] = 10;
@@ -12,6 +12,7 @@ function main() {
 	while ( 1 ) {
 	fputs(stdout, "> ");	
 	fgets(stdin, &text);
-	fputs(stdout, &text);
+	strarr(&arr, &text, " ");
+	fputs(stdout, arr[1]);
 	}
 }
