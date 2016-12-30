@@ -1,0 +1,21 @@
+$include "sdk/stdlib.evm"
+array8u ver[8];
+array8u period[] = ".";
+array8u kernel_name[16];
+function main() {
+	local v;
+	v = _kernel_info(&kernel_name);
+
+	itoa(v, &ver);
+	
+	
+	itoa(v, &ver + 1);
+	ver[1] = period[0];
+	if ( argc > 1 ) {
+		fputs_ex(stdout, &kernel_name, hostname(), &ver, 0);
+		fputc(stdout, 10);
+	} else {
+		fputs_ex(stdout, &kernel_name, "`", 0, 0);
+	}
+	
+}

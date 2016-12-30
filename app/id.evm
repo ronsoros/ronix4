@@ -1,0 +1,8 @@
+$include "sdk/stdlib.evm"
+array8u str[8];
+function main() {
+	fputs(stdout, "uid=");
+	itoa(getuid(selfpid()), &str);
+	fputs(stdout, &str);
+	fputc(stdout, 10);
+}

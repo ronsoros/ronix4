@@ -1,0 +1,6 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	setuid(selfpid(), atoi(argv[1]));
+	exec("bin/sh", "bin/sh");
+}
