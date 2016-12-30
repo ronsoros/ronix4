@@ -1,0 +1,138 @@
+// standard library
+array8u scratch[1];
+global stdin;
+global stdout;
+function main();
+function write(pipe, src, len);
+function read(pipe, dest, len, maxtries);
+function selfpid();
+
+function _start() { // executable entrypoint
+	stdin = selfpid() * 2;
+	stdout = selfpid() * 2 + 1;
+	main();
+	$uf5();	
+}
+function exit() { // exit application
+	$uf5();
+}
+function _kernel_putc(n) { // [syscall] put character to terminal
+	$uf0(n);
+}
+function _kernel_getc() { // [syscall] get character from terminal
+	return $uf1();
+}
+
+function fputc(pipe, char) { // write 'char' to 'pipe'
+	scratch[0] = char;
+	write(pipe, &scratch, 1);
+	return 0;
+}
+function selfpid() { // get own process id
+	return $uf7();
+}
+function fgetc(pipe) { // read character from 'pipe'
+	local r; r = 0;
+	while ( !r ) {
+	r = $uf8(pipe, &scratch, 1);
+	}
+	return scratch[0];
+}
+function read(pipe, dest, len, maxtries) { // read from 'pipe' into 'dest' up to 'len' characters, retry 'maxtries' times
+	local r;
+	local tries;
+	r = 0;
+	tries = 0;
+	while ( r == 0 && tries != maxtries ) {
+	r = $uf8(pipe, dest, len);
+	tries++;
+	}
+	return r;
+}
+function write(pipe, src, len) { // write data from 'src' 'len' characters into 'pipe'
+	$uf9(pipe, src, len);
+}
+function fputs(pipe, str) { // write 'str' to 'pipe'
+	local i;
+	for ( i = 0; $ptr8u[str, i]; i++ ) {
+		fputc(pipe, $ptr8u[str, i]);
+	}
+}
+function fgets(pipe, str) { // read line from 'pipe' into 'str'
+	local i, n;
+	n = 1;
+	for(i=0; n; i++) {
+		
+		$ptr8u[str, i] = fgetc(pipe);
+		if ( $ptr8u[str, i] == 10 || $ptr8u[str, i] == 13 ) {
+		$ptr8u[str,i] = 0;
+		return i;
+		}
+	}
+	
+	$ptr8u[str, i] = 0;
+	
+	return i;
+}
+function _kernel_puts(str) { // [syscall] put string to terminal
+	local i;
+	for ( i = 0; $ptr8u[str, i]; i++ ) {
+		$uf0($ptr8u[str, i]);
+	}
+}
+function _kernel_gets(str) { // [syscall] get line from terminal
+	local i;
+	for(i=0; $ptr8u[str, i - 1] != 10; i++) {
+		$ptr8u[str, i] = $uf1();
+	}
+	$ptr8u[str, i] = 0;
+}
+function strlen(str) { // get length of 'str'
+	local i;
+	for(i=0; $ptr8u[str, i]; i++ ) {
+	}
+	return i;
+}
+function reverse(s) { // reverse 's'
+	local i, j, c, q;
+	q = 1;
+	j = strlen(s) - 1;
+	while (q) {
+		if ( i<j ) {
+		c = $ptr8u[s, i];
+		$ptr8u[s, i] = $ptr8u[s, j];
+		$ptr8u[s, j] = c;
+		i++;
+		j--;
+		} else {
+		q = 0;
+		}
+	}
+}
+function itoa(n, str) { // convert number 'n' to string, store in 'str'
+	local i;
+	i = 0;
+	while (n) {
+		
+		$ptr8u[str, i] = n % 10 + 48;
+		i++;
+		n = n / 10;
+	}
+	$ptr8u[str, i] = 0;
+	reverse(str);
+}
+function fork() { // create new process
+	
+	local q;
+	q = $uf3();
+	return q;
+}
+function wait(pid) { // wait for process 'pid' to die
+	$uf4(pid);
+}
+function exec(path) { // replace current running process with program at 'path'
+	$uf6(path);
+}
+function _kernel_info(dbuf) { // [syscall] get kernel information
+	return $uf2(dbuf);
+}

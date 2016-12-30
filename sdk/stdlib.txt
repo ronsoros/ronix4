@@ -1,0 +1,20 @@
+_start() - executable entrypoint
+exit() - exit application
+_kernel_putc(n) - [syscall] put character to terminal
+_kernel_getc() - [syscall] get character from terminal
+fputc(pipe, char) - write 'char' to 'pipe'
+selfpid() - get own process id
+fgetc(pipe) - read character from 'pipe'
+read(pipe, dest, len, maxtries) - read from 'pipe' into 'dest' up to 'len' characters, retry 'maxtries' times
+write(pipe, src, len) - write data from 'src' 'len' characters into 'pipe'
+fputs(pipe, str) - write 'str' to 'pipe'
+fgets(pipe, str) - read line from 'pipe' into 'str'
+_kernel_puts(str) - [syscall] put string to terminal
+_kernel_gets(str) - [syscall] get line from terminal
+strlen(str) - get length of 'str'
+reverse(s) - reverse 's'
+itoa(n, str) - convert number 'n' to string, store in 'str'
+fork() - create new process
+wait(pid) - wait for process 'pid' to die
+exec(path) - replace current running process with program at 'path'
+_kernel_info(dbuf) - [syscall] get kernel information

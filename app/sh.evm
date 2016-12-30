@@ -1,0 +1,17 @@
+// The Ronsor Again Shell (Rash) (C) 2015, 2016, 2017 Ronsor.
+array8u text[64];
+$include "sdk/stdlib.evm"
+
+function main() {
+	local c;
+	text[0] = 10;
+	write(stdout, "Test", 4);
+	write(stdout, "Blah", 4);
+	write(stdout, "More", 4);
+	fputs(stdout, "Hi World`");
+	while ( 1 ) {
+	fputs(stdout, "> ");	
+	fgets(stdin, &text);
+	fputs(stdout, &text);
+	}
+}
