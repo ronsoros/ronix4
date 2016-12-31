@@ -3,15 +3,13 @@ array8u buf[128];
 function main() {
 	local f, n;
 	if ( argc == 1 ) {
-		fputs(stdout, "Usage: ls [path]`");
-		exit();
+		argv[1] = string("");
 	}
 	f = file_list(argv[1]);
-	while(pipe_left(f) > 1) {
-		n = read(f, &buf, 128, -1);
-		if ( n > 0 ) {
-		write(stdout, &buf, n);
-		}
+	while(!eof(f)) {
+		fgets(f, &buf);
+		fputs(stdout, &buf);
+		fputc(stdout, 10);
 	}
 	close(f);
 }

@@ -1,0 +1,6 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	fputs(stdout, argv[1]);
+	fputc(stdout, 10);
+}

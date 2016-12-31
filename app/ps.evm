@@ -1,0 +1,13 @@
+$include "sdk/stdlib.evm"
+array8u buffer[1024];
+array16 array[64];
+global entries;
+function main() {
+	local i;
+	_kernel_proclist(&buffer);
+	entries = strarr(&array, &buffer, ";");
+	for ( i = 0; i < entries; i = i + 3 ) {
+		fputs_ex(stdout, array[i], array[i+1], array[i+2], 0);
+		fputc(stdout, 10);
+	}
+}

@@ -58,6 +58,9 @@ function _kernel_file_close(pipe) {
 function _kernel_file_eof(pipe) {
 	return $uf12(9, pipe);
 }
+function eof(pipe) {
+	return !(pipe_left(pipe) > 1) + !_kernel_file_eof(pipe);
+}
 function close(pipe) {
 	_kernel_release_pipe(pipe);
 	_kernel_file_close(pipe);
@@ -73,6 +76,12 @@ function file_list(name) {
 	p = _kernel_get_pipe();
 	_kernel_file_list(name, p);
 	return p;
+}
+function _kernel_pipe_isfile(pipe) {
+	return $uf12(20, pipe);
+}
+function _kernel_proclist(ptr) {
+	$uf12(21, ptr);
 }
 function atoi(str) { // convert 'str' to number
    local i;
@@ -93,11 +102,19 @@ function strarr(array, str, delim) { // split 'str' by 'delim' into 'array', ret
 	$ptr16[array, n] = str;
 	n = n + 1;
 	for ( i = 0; $ptr8u[str, i]; i++ ) {
-		if ( $ptr8u[str, i] == $ptr8u[delim, 0] ) {
+		if ( $ptr8u[str, i] == $ptr8u[delim, 0] && l == 0 ) {
 			$ptr16[array, n] = str + i + 1;
 			$ptr8u[str, i] = 0;
 			n++;
 			
+		}
+		if ( $ptr8u[str, i] == 34 ) {
+			l = !l;
+			if ( l == 1 ) {
+			$ptr16[array, n - 1] = str + i + 1;
+			} else {
+			$ptr8u[str, i] = 0;
+			}
 		}
 	}
 	return n;
@@ -115,6 +132,7 @@ function strcmp(str1, str2) { // compare strings
 	}
 	return 0;
 }
+
 function exit() { // exit application
 	while ( !pipe_empty(stdout) ) {}
 	$uf5();
@@ -137,7 +155,12 @@ function selfpid() { // get own process id
 function fgetc(pipe) { // read character from 'pipe'
 	local r; r = 0;
 	while ( !r ) {
+	if ( (!_kernel_file_eof(pipe) && _kernel_pipe_isfile(pipe)) ) {
+	r = 1;
+	scratch[0] = 10;
+	} else {
 	r = $uf8(pipe, &scratch, 1);
+	}
 	}
 	return scratch[0];
 }
@@ -163,6 +186,7 @@ function fputs(pipe, str) { // write 'str' to 'pipe'
 function fgets(pipe, str) { // read line from 'pipe' into 'str'
 	local i, n;
 	n = 1;
+	
 	for(i=0; n; i++) {
 		
 		$ptr8u[str, i] = fgetc(pipe);
@@ -275,4 +299,7 @@ function hostname() { // get system hostname
 }
 function sethostname(newhost) { // set system hostname
 	$uf12(2, newhost);
+}
+function strcat(s1, s2) {
+	strcpy(s1 + strlen(s1), s2);
 }
