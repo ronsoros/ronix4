@@ -1,13 +1,14 @@
 $include "sdk/stdlib.evm"
 array8u buf[64];
 function main() {
-	_kernel_file_open("etc/passwd", 9, 0);
+	local f;
+	f = open("etc/passwd", 0);
 	fputs(stdout, "Testing file read.`");
-	while(pipe_left(9) > 1) {
-	if ( !pipe_empty(9) ) {
-	itoa(pipe_left(9), &buf);
+	while(pipe_left(f) > 1) {
+	if ( !pipe_empty(f) ) {
+	itoa(pipe_left(f), &buf);
 	fputs(stdout, &buf); fputc(stdout, 10);
-	fgets(9, &buf);
+	fgets(f, &buf);
 	fputs(stdout, &buf);
 	fputc(stdout, 10);
 	} else {
@@ -15,5 +16,5 @@ function main() {
 	}
 	}
 	fputs(stdout, "`Done.`");
-	_kernel_file_close(9);
+	close(f);
 }

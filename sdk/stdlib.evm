@@ -29,16 +29,50 @@ function setuid(pid, id) { // setuid for 'pid' to 'id'
 function getuid(pid) { // getuid for 'pid'
 	return $uf12(4, pid);
 }
+function _kernel_get_pipe() {
+	return $uf12(12);
+}
+function _kernel_release_pipe(pipe) {
+	return $uf12(11, pipe);
+}
+
 function pipe_empty(pipe) { // check if 'pipe' is empty
 	local ret;
 	ret = $uf12(3, pipe);
 	return ret;
 }
+function pipe_left(pipe) {
+	local ret;
+	ret = $uf12(10, pipe);
+	return ret;
+}
 function _kernel_file_open(name, pipe, can_write) {
 	$uf12(7, name, pipe);
 }
+function _kernel_file_list(name, pipe) {
+	$uf12(14, name, pipe);
+}
 function _kernel_file_close(pipe) {
 	$uf12(8, pipe);
+}
+function _kernel_file_eof(pipe) {
+	return $uf12(9, pipe);
+}
+function close(pipe) {
+	_kernel_release_pipe(pipe);
+	_kernel_file_close(pipe);
+}
+function open(name, can_write) {
+	local p;
+	p = _kernel_get_pipe();
+	_kernel_file_open(name, p, can_write);
+	return p;
+}
+function file_list(name) {
+	local p;
+	p = _kernel_get_pipe();
+	_kernel_file_list(name, p);
+	return p;
 }
 function atoi(str) { // convert 'str' to number
    local i;
@@ -57,15 +91,16 @@ function strarr(array, str, delim) { // split 'str' by 'delim' into 'array', ret
 	n = 0;
 	l = 0;
 	$ptr16[array, n] = str;
+	n = n + 1;
 	for ( i = 0; $ptr8u[str, i]; i++ ) {
 		if ( $ptr8u[str, i] == $ptr8u[delim, 0] ) {
-			$ptr16[array, n] = str + l;
+			$ptr16[array, n] = str + i + 1;
 			$ptr8u[str, i] = 0;
 			n++;
-			l = i + 1;
+			
 		}
 	}
-	return n + 1;
+	return n;
 }
 function string(value) { // make a string
 	return value;
@@ -81,6 +116,7 @@ function strcmp(str1, str2) { // compare strings
 	return 0;
 }
 function exit() { // exit application
+	while ( !pipe_empty(stdout) ) {}
 	$uf5();
 }
 function _kernel_putc(n) { // [syscall] put character to terminal
@@ -112,7 +148,9 @@ function read(pipe, dest, len, maxtries) { // read from 'pipe' into 'dest' up to
 	tries = 0;
 	while ( r == 0 && tries != maxtries ) {
 	r = $uf8(pipe, dest, len);
+	if ( maxtries != -1 ) {
 	tries++;
+	}
 	}
 	return r;
 }

@@ -1,0 +1,9 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	if ( argc == 1 ) {
+		fputs(stdout, "Usage: hostname [new hostname]`");
+		exit();
+	}
+	sethostname(argv[1]);
+}

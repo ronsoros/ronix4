@@ -1,0 +1,4 @@
+bin
+etc
+kernel.exe
+tmp.txt

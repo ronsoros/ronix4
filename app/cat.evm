@@ -1,0 +1,17 @@
+$include "sdk/stdlib.evm"
+array8u buf[128];
+function main() {
+	local f, n;
+	if ( argc == 1 ) {
+		fputs(stdout, "Usage: cat [filename]`");
+		exit();
+	}
+	f = open(argv[1], 0);
+	while(pipe_left(f) > 1) {
+		n = read(f, &buf, 128, -1);
+		if ( n > 0 ) {
+		write(stdout, &buf, n);
+		}
+	}
+	close(f);
+}

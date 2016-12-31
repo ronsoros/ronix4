@@ -25,9 +25,16 @@ int16_t vm_uid[MAX_PID] = {32767, };
 char *vm_files[MAX_FILE] = {NULL, };
 int16_t vm_fseek[MAX_FILE] = {0, }; 
 int16_t vm_fpipe[MAX_FILE] = {0, };
+int16_t vm_pipeu[MAX_PID * 2 + MAX_PIPE] = {0, };
+int freepipe() {
+	int q;
+	for ( q = MAX_PID * 2; q < MAX_PID * 2 + MAX_PIPE; q++ ) { if(!vm_pipeu[q]) { return q; } }
+	return -1;
+}
 enum fsact {
 	LS, RM, WRITE, READ, INFO
 };
+enum fsact vm_fact[MAX_FILE];
 typedef struct fsparsed {
 	int driver;
 	char path[64];
@@ -37,7 +44,19 @@ typedef int (*fsdriver)(enum fsact,int,int,char*,char*);
 #define newfsdriver(n) int n (enum fsact action, int seekn, int len, char *path, char *buf)
 #ifndef NO_FOPEN
 newfsdriver(fs_default){
-	if(action == READ) {
+	if(action == LS) {
+		char cmd[1024];
+		
+		#ifdef WIN32
+		sprintf(cmd, "dir /b %s >tmp.txt", path);
+		#else
+		sprintf(cmd, "ls %s >tmp.txt", path);
+		#endif
+		printf("ls: %s\n", path);
+		path = strdup("tmp.txt");
+		system(cmd);
+	}
+	if(action == READ || action == LS) {
 		FILE *q = fopen(path, "r");
 		  fseek (q , 0 , SEEK_END);
   		int sz = ftell (q);
@@ -238,7 +257,19 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				strcpy(hostname, &vm_mem[curvm][argv[1]]); } 
 				break; }
 			case 3: {
+				//printf("Pipe empty: %d\n", vm_pipen[argv[1]]);
 				return vm_pipen[argv[1]] == 0; break;
+			}
+			case 11: {
+				vm_pipeu[argv[1]] = 0; break;
+			}
+			case 12: {
+				int ret = freepipe();
+				vm_pipeu[ret] = 1;
+				return ret;
+			}
+			case 10: {
+				return vm_pipen[argv[1]]; break;
 			}
 			case 4: {
 				return vm_uid[argv[1]];
@@ -258,6 +289,18 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				vm_files[newfd] = strdup(&vm_mem[curvm][argv[1]]);
 				vm_fpipe[newfd] = argv[2];
 				vm_fseek[newfd] = 0;
+				vm_fact[newfd] = READ;
+				vm_pipen[argv[2]] = 0;
+				vm_pipex[argv[2]] = 0;
+				break;
+			}
+			case 14: {
+				int newfd = -1;
+				newfd = freefd();
+				vm_files[newfd] = strdup(&vm_mem[curvm][argv[1]]);
+				vm_fpipe[newfd] = argv[2];
+				vm_fseek[newfd] = 0;
+				vm_fact[newfd] = LS;
 				vm_pipen[argv[2]] = 0;
 				vm_pipex[argv[2]] = 0;
 				break;
@@ -272,6 +315,17 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 						vm_fseek[thefd] = 0;
 					}
 				}
+				break;
+			}
+			case 9: {
+				int thefd = 0;
+				for(thefd = 0; thefd < MAX_FILE; thefd++ ) {
+					if ( vm_fpipe[thefd] == argv[1] ) {
+						return 1;
+					}
+				}
+				return 0;
+				break;
 			}
 		}
 		}
@@ -322,15 +376,17 @@ void loop()
 	int adder = 0;
 	for ( n = 0; n < MAX_FILE; n++ ) {
 	if ( vm_files[n] != NULL ) {
+	//printf("Pipe left: %d\n", vm_pipen[vm_fpipe[n]]);
 	if ( vm_pipen[vm_fpipe[n]] == 0 ) {
-		vm_pipen[vm_fpipe[n]] = PIPE_BUF / 2;
-		adder = fscall(READ, vm_fseek[n], PIPE_BUF / 2, "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
+		
+		adder = fscall(vm_fact[n], vm_fseek[n], PIPE_BUF / 2, "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
 		if ( adder == -1 ) {
 		free(vm_files[n]);
 		vm_files[n] = 0;
 		vm_fseek[n] = 0;
 		vm_fpipe[n] = 0;
 		} else {
+		vm_pipen[vm_fpipe[n]] = adder;
 		vm_fseek[n] += adder;
 		}
 	}
