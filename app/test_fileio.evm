@@ -1,0 +1,10 @@
+$include "sdk/stdlib.evm"
+array8u buf[64];
+function main() {
+	_kernel_file_open("etc/passwd", 9, 0);
+	fputs(stdout, "Testing file read.`");
+	fgets(9, &buf);
+	fputs(stdout, &buf);
+	fputs(stdout, "`Done.`");
+	_kernel_file_close(9);
+}
