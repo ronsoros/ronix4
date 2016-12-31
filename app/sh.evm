@@ -6,15 +6,20 @@ array8u user[32];
 array8u prompt[] = "# ";
 array8u uprompt[] = "$ ";
 array8u fullprompt[64];
+array8u path[64];
 function main() {
-		local c, q;
+		local c, q, f;
 	itoa(getuid(selfpid()), &user);
 	if ( getuid(selfpid()) == 1 ) {
-		strcpy(&user, "root");
 	} else {
 	prompt[0] = uprompt[0];
 	}
-
+	strcpy(&path, "/0/users/");
+	strcat(&path, &user);
+	strcat(&path, "/.uname");
+	f = open(&path, 0);
+	fgets(f, &user);
+	close(f);
 	while ( 1 ) {
 	strcpy(&fullprompt, &user);
 	strcat(&fullprompt, "@");

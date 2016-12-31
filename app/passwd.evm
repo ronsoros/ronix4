@@ -1,0 +1,20 @@
+$include "sdk/stdlib.evm"
+array8u newpass[16];
+array8u strdat[64];
+array8u id[8];
+function main() {
+	local f;
+	strcpy(&strdat, "/0/users/");
+	itoa(getuid(selfpid()), &id);
+	strcat(&strdat, &id);
+	strcat(&strdat, "/.passwd");
+	fputs(stdout, "New password: ");
+	fgets(stdin, &newpass);
+	if ( getuid(selfpid()) == 1 ) {
+		f = open(&strdat, 1);
+		fputs(f, &newpass);
+		close(f);
+	} else {
+		fputs(stdout, "Operation not permitted");
+	}
+}

@@ -1,0 +1,8 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	local f;
+	f = open("test.txt", 1);
+	fputs(f, "Some text`");
+	close(f);
+}

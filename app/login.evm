@@ -1,0 +1,52 @@
+$include "sdk/stdlib.evm"
+array8u uname[32];
+array8u cmp[32];
+array8u path[64];
+array8u ids[8];
+array8u idsp[8];
+array8u pwd[64];
+global newuid;
+function main() {
+	local f, f2;
+	newuid = 0;
+	if ( getuid(selfpid()) != 1 ) {
+		fputs(stdout, "Operation not permitted.`");
+		exit();
+	}
+	fputs(stdout, "Username: ");
+	fgets(stdin, &uname);
+	f = file_list("/0/users");
+	while(!eof(f)) {
+		fgets(f, &ids);
+		strcpy(&path, "/0/users/");
+		strcat(&path, &ids);
+		strcat(&path, "/.uname");
+		f2 = open(&path, 0);
+		fgets(f2, &cmp);
+		if ( !strcmp(&uname, &cmp) ) {
+			strcpy(&idsp, &ids);
+			newuid = atoi(&ids);
+		}
+		close(f2);
+	}
+	close(f);
+	if ( newuid == 0 ) {
+		fputs(stdout, "User does not exist.`");
+		exit();
+	}
+	fputs(stdout, "Password: ");
+	fgets(stdin, &pwd);
+	strcpy(&path, "/0/users/");
+	strcat(&path, &idsp);
+	strcat(&path, "/.passwd");
+	f2 = open(&path, 0);
+	fgets(f2, &cmp);
+	if ( !strcmp(&pwd, &cmp) ) {
+		setuid(selfpid(), newuid);
+		close(f2);
+		exec("/0/bin/sh", "/0/bin/sh");
+	} else {
+		fputs(stdout, "Bad password.`");
+	}
+	close(f2);
+}

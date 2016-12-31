@@ -47,7 +47,7 @@ function pipe_left(pipe) {
 	return ret;
 }
 function _kernel_file_open(name, pipe, can_write) {
-	$uf12(7, name, pipe);
+	$uf12(7, name, pipe, can_write);
 }
 function _kernel_file_list(name, pipe) {
 	$uf12(14, name, pipe);

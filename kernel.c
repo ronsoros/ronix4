@@ -73,6 +73,22 @@ newfsdriver(fs_default){
 		return ret;
 		}
 	}
+	if(action == WRITE) {
+		FILE *q = fopen(path, "at");
+		  fseek (q , 0 , SEEK_END);
+  		int sz = ftell (q);
+  		rewind (q);
+	/*	if ( seekn >= sz ) {
+			return -1;
+		}*/
+		//printf("path: %s\n", path);
+		if ( q ) {
+		fseek(q, seekn, SEEK_SET);
+		int ret = fwrite(buf, 1, len, q);
+		fclose(q);
+		return ret;
+		}
+	}
 	return -1;
 }
 #endif
@@ -221,23 +237,16 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		char *str = strdup(&vm_mem[curvm][argv[0]]);
 		char *ptr = strchr(str, ' ');
 		if ( ptr ) *ptr = '\0';
-		FILE *fp = fopen(str, "rb");
-		if ( !fp ) {
-		char str2[128];
-		sprintf(str2, "bin/%s", str);
-		fp = fopen(str2, "rb");
-		}
-		if ( fp ) {
 		uint16_t entrypoint = 0;
-		fread(&entrypoint, 1, 2, fp);
-		fread(vm_mem[curvm], 1, 4096, fp);
-		fclose(fp);
-		vmarr[curvm]->ip = entrypoint - 4;
-		} else {
-		free(str);
+	int ret = fscall(READ, 0, 2, "/0", str, &entrypoint);
+	if ( ret == -1 ) {
 		return -1;
-		}
-		free(str);
+	}
+	ret = fscall(READ, 2, PROG_SZ, "/0", str, vm_mem[curvm]);
+	if ( ret == -1 ) {
+		return -1;
+	}
+		vmarr[curvm]->ip = entrypoint - 1;	
 	} else if ( funcid == 5 ) {
 		
 		vmarr[curvm] = NULL;
@@ -294,7 +303,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				vm_files[newfd] = strdup(&vm_mem[curvm][argv[1]]);
 				vm_fpipe[newfd] = argv[2];
 				vm_fseek[newfd] = 0;
-				vm_fact[newfd] = READ;
+				vm_fact[newfd] = argv[3] ? WRITE : READ;
 				vm_pipen[argv[2]] = 0;
 				vm_pipex[argv[2]] = 0;
 				vm_pipef[argv[2]] = 1;
@@ -401,7 +410,7 @@ void loop()
 	for ( n = 0; n < MAX_FILE; n++ ) {
 	if ( vm_files[n] != NULL ) {
 	//printf("Pipe left: %d\n", vm_pipen[vm_fpipe[n]]);
-	if ( vm_pipen[vm_fpipe[n]] == 0 ) {
+	if ( vm_pipen[vm_fpipe[n]] == 0 && vm_fact[n] != WRITE ) {
 		vm_pipex[vm_fpipe[n]] = 0;
 		adder = fscall(vm_fact[n], vm_fseek[n], PIPE_BUF / 2, "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
 		if ( adder == -1 ) {
@@ -413,6 +422,20 @@ void loop()
 		vm_pipen[vm_fpipe[n]] = adder;
 		vm_fseek[n] += adder;
 		}
+	}
+	if ( vm_fact[n] == WRITE && vm_pipen[vm_fpipe[n]] > 0 ) {
+		vm_pipex[vm_fpipe[n]] = 0;
+		adder = fscall(vm_fact[n], vm_fseek[n], vm_pipen[vm_fpipe[n]], "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
+		//printf("abc: %d\n", adder);
+		/*if ( adder == -1 ) {
+		free(vm_files[n]);
+		vm_files[n] = 0;
+		vm_fseek[n] = 0;
+		vm_fpipe[n] = 0;
+		} else {*/
+		vm_pipen[vm_fpipe[n]] = 0;
+		if ( adder != -1 ) { vm_fseek[n] += adder; }
+		//}
 	}
 	}
 	}

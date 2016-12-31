@@ -23,6 +23,6 @@ function main() {
 		//_kernel_putc(65);
 	}
 	} else {
-	exec("bin/sh", "");
+	exec("/0/bin/login", "");
 	}
 }
