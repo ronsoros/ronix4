@@ -8,6 +8,9 @@
 #define MAX_PIPE 8
 #define PIPE_BUF 64
 #define PROG_SZ 4096
+#define KERNEL_VER 402
+#define MAX_FS 8
+#define MAX_FILE 8
 #define UNUSED __attribute__((unused))
 int curvm = 0;
 uint8_t vm_mem[MAX_PID][PROG_SZ] = { 0, };
@@ -19,6 +22,62 @@ char *vm_args[MAX_PID] = { NULL, };
 int16_t vm_pipen[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t vm_pipex[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t vm_uid[MAX_PID] = {32767, };
+char *vm_files[MAX_FILE] = {NULL, };
+int16_t vm_fseek[MAX_FILE] = {0, }; 
+int16_t vm_fpipe[MAX_FILE] = {0, };
+enum fsact {
+	LS, RM, WRITE, READ, INFO
+};
+typedef struct fsparsed {
+	int driver;
+	char path[64];
+} fsparsed;
+typedef int (*fsdriver)(enum fsact,int,int,char*,char*);
+
+#define newfsdriver(n) int n (enum fsact action, int seekn, int len, char *path, char *buf)
+#ifndef NO_FOPEN
+newfsdriver(fs_default){
+	if(action == READ) {
+		FILE *q = fopen(path, "r");
+		  fseek (q , 0 , SEEK_END);
+  		int sz = ftell (q);
+  		rewind (q);
+		if ( seekn >= sz ) {
+			return -1;
+		}
+		//printf("path: %s\n", path);
+		if ( q ) {
+		fseek(q, seekn, SEEK_SET);
+		int ret = fread(buf, 1, len, q);
+		fclose(q);
+		return ret;
+		}
+	}
+	return -1;
+}
+#endif
+fsdriver kfsdrv[MAX_FS] = { fs_default, NULL, };
+struct fsparsed parsefs(char *pwd, char *path) {
+	char tmppath[256];
+	struct fsparsed ret = { 0, NULL };
+	if ( path[0] != '/' ) {
+		sprintf(tmppath, "%s/%s", pwd, path);
+	} else {
+		strcpy(tmppath, path);
+	}
+	if ( !isdigit(tmppath[1]) ) {
+		ret.driver = 0; strcpy(ret.path,&tmppath[1]);
+		return ret;
+	}
+	//printf("%s\n", tmppath);
+	ret.driver = tmppath[1] - '0';
+	strcpy(ret.path, &tmppath[3]);
+	return ret;
+}
+int fscall(enum fsact action, int seekn, int len, char *pwd, char *name, char *buf) {
+	fsparsed parsed = parsefs(pwd, name);
+	return (*kfsdrv[parsed.driver])(action, seekn, len, parsed.path, buf);
+}
 int16_t mem_read(uint16_t addr, bool is16bit, void *ctx)
 {
 	if (addr + (is16bit ? 1 : 0) >= sizeof(vm_mem[curvm]))
@@ -41,6 +100,11 @@ void mem_write(uint16_t addr, int16_t value, bool is16bit, void *ctx)
 int freepid() {
 	int q = 0;
 	for ( q = 0; vmarr[q] != NULL; q++ ) {}
+	return q;
+}
+int freefd() {
+	int q = 0;
+	for ( q = 0; vm_files[q] != NULL; q++ ) {}
 	return q;
 }
  void reverse(char *s, int len)
@@ -70,7 +134,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 	} else if ( funcid == 2 ) {
 		char *sysinfodest = &vm_mem[curvm][argv[0]];
 		strcpy(sysinfodest, "Ronix");
-		return 401;
+		return KERNEL_VER;
 	} else if ( funcid == 3 ) {
 		// let's fork
 		int newpid = freepid();
@@ -183,6 +247,31 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				if ( vm_uid[curvm] == 1 ) {
 				vm_uid[argv[1]] = argv[2];
 				}
+				break;
+			}
+			case 6: {
+				strcpy(&vm_mem[curvm][argv[1]], __DATE__ " " __TIME__); break;
+			}
+			case 7: {
+				int newfd = -1;
+				newfd = freefd();
+				vm_files[newfd] = strdup(&vm_mem[curvm][argv[1]]);
+				vm_fpipe[newfd] = argv[2];
+				vm_fseek[newfd] = 0;
+				vm_pipen[argv[2]] = 0;
+				vm_pipex[argv[2]] = 0;
+				break;
+			}
+			case 8: {
+				int thefd = -1;
+				for(thefd = 0; thefd < MAX_FILE; thefd++ ) {
+					if ( vm_fpipe[thefd] == argv[1] ) {
+						vm_fpipe[thefd] = 0;
+						free(vm_files[thefd]);
+						vm_files[thefd] = NULL;
+						vm_fseek[thefd] = 0;
+					}
+				}
 			}
 		}
 		}
@@ -198,14 +287,25 @@ void setup(int argc, char **argv)
 	}
 	vmarr[0] = &vmarrx[0];
 	setbuf(stdout, NULL);
-	FILE *fp = fopen(argv[1], "rb");
 	uint16_t entrypoint = 0;
+	/*FILE *fp = fopen(argv[1], "rb");
+	
 	fread(&entrypoint, 1, 2, fp);
 	fread(vm_mem[0], 1, 4096, fp);
-	fclose(fp);
+	fclose(fp);*/
+	int ret = fscall(READ, 0, 2, "/0", argv[1], &entrypoint);
+	if ( ret == -1 ) {
+		printf("Kernel Panic! Can't load init.\n");
+		while(1) {}
+	}
+	ret = fscall(READ, 2, PROG_SZ, "/0", argv[1], vm_mem[0]);
+	if ( ret == -1 ) {
+		printf("Kernel Panic! Can't load init.\n");
+		while(1) {}
+	}
 	struct embedvm_s* vm = vmarr[0];
 	vm->ip = entrypoint;
-	printf("Starting kernel: init entrypoint: 0x%04x\n", entrypoint);
+	printf("Ronix kernel %d: loaded init. Jumping to entrypoint: 0x%04x.", KERNEL_VER, entrypoint);
 	vm->sp = vm->sfp = sizeof(vm_mem[curvm]);
 	vm->mem_read = &mem_read;
 	vm->mem_write = &mem_write;
@@ -219,6 +319,23 @@ void loop()
 	// Serial.print(vm.ip, DEC);
 	// Serial.print(">");
 	int n = 0;
+	int adder = 0;
+	for ( n = 0; n < MAX_FILE; n++ ) {
+	if ( vm_files[n] != NULL ) {
+	if ( vm_pipen[vm_fpipe[n]] == 0 ) {
+		vm_pipen[vm_fpipe[n]] = PIPE_BUF / 2;
+		adder = fscall(READ, vm_fseek[n], PIPE_BUF / 2, "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
+		if ( adder == -1 ) {
+		free(vm_files[n]);
+		vm_files[n] = 0;
+		vm_fseek[n] = 0;
+		vm_fpipe[n] = 0;
+		} else {
+		vm_fseek[n] += adder;
+		}
+	}
+	}
+	}
 	for ( n = 0; n < MAX_PID; n++ ) {
 	if ( vmarr[n] != NULL ) {
 	curvm = n;

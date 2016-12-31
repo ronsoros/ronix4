@@ -34,6 +34,12 @@ function pipe_empty(pipe) { // check if 'pipe' is empty
 	ret = $uf12(3, pipe);
 	return ret;
 }
+function _kernel_file_open(name, pipe, can_write) {
+	$uf12(7, name, pipe);
+}
+function _kernel_file_close(pipe) {
+	$uf12(8, pipe);
+}
 function atoi(str) { // convert 'str' to number
    local i;
    local res; res = 0; 
