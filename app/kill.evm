@@ -1,0 +1,10 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	local target;
+	if ( argc == 1 ) { fputs(stdout, "Usage: kill [pid]`"); exit(); }
+	target = atoi(argv[1]);
+	if ( !kill(target) ) {
+		fputs(stdout, "Permission denied.`");
+	}
+}

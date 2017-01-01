@@ -1,5 +1,6 @@
 // The Ronsor Again Shell (Rash) (C) 2015, 2016, 2017 Ronsor.
-array8u text[64];
+array8u text[128];
+array8u text2[128];
 $include "sdk/stdlib.evm"
 array16 arr[5];
 array8u user[32];
@@ -7,8 +8,9 @@ array8u prompt[] = "# ";
 array8u uprompt[] = "$ ";
 array8u fullprompt[64];
 array8u path[64];
+array8u binprefix[64];
 function main() {
-		local c, q, f;
+		local c, q, f, tryfork;
 	itoa(getuid(selfpid()), &user);
 	if ( getuid(selfpid()) == 1 ) {
 	} else {
@@ -20,10 +22,16 @@ function main() {
 	f = open(&path, 0);
 	fgets(f, &user);
 	close(f);
+	
 	while ( 1 ) {
+	tryfork = 1;
 	strcpy(&fullprompt, &user);
 	strcat(&fullprompt, "@");
 	strcat(&fullprompt, hostname());
+	
+	strcat(&fullprompt, ":");
+	getcwd(&path);
+	strcat(&fullprompt, &path);
 	strcat(&fullprompt, &prompt);
 	fputs(stdout, &fullprompt);
 	fgets(stdin, &text);
@@ -31,15 +39,29 @@ function main() {
 	fputs(stdout, "Exiting`");
 	exit();
 	}
+	strcpy(&text2, &text);
+	if(strarr(&arr, &text2, " ") >= 2) {
+		if ( !strcmp(arr[0], "cd") ) {
+			chdir(arr[1]);
+			tryfork = 0;
+		}
+		
+	}
+	if ( tryfork ) {
 	q = fork();
 	if ( q > 0 ) {
 		while ( !dead(q) ) { fwdio(q); }
 		
 	} else {
 		if ( exec(&text, &text) == -1 ) {
+		strcpy(&fullprompt, "/0/bin/");
+		strcat(&fullprompt, &text);
+		if ( exec(&fullprompt, &text) == -1 ) {
 		fputs(stdout, "Command not found`");
 		exit();
 		}
+		}
+	}
 	}
 	}
 }

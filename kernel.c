@@ -23,6 +23,8 @@ int16_t vm_pipen[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t vm_pipex[MAX_PID * 2 + MAX_PIPE] = {0,};
 int16_t vm_uid[MAX_PID] = {32767, };
 char *vm_files[MAX_FILE] = {NULL, };
+char *vm_fpwd[MAX_FILE] = {NULL, };
+char *vm_pwd[MAX_PID] = {NULL, };
 int16_t vm_fseek[MAX_FILE] = {0, }; 
 int16_t vm_fpipe[MAX_FILE] = {0, };
 int16_t vm_pipeu[MAX_PID * 2 + MAX_PIPE] = {0, };
@@ -47,8 +49,14 @@ typedef int (*fsdriver)(enum fsact,int,int,char*,char*);
 newfsdriver(fs_default){
 	if(action == LS) {
 		char cmd[1024];
-		
+		path = strdup(path);
+		char *ptr = path;
 		#ifdef WIN32
+		while(*ptr) {
+			if ( *ptr == '/' ) { *ptr = '\\'; }
+			ptr++;
+		}
+		//printf("Windows hack: %s\n", path);
 		sprintf(cmd, "dir /b %s >tmp.txt", path);
 		#else
 		sprintf(cmd, "ls %s >tmp.txt", path);
@@ -88,6 +96,18 @@ newfsdriver(fs_default){
 		fclose(q);
 		return ret;
 		}
+	}
+	if ( action == INFO ) {
+		FILE *q = fopen(path, "rt");
+		
+		if ( q ) {
+			switch(seekn) {
+			case 1: fclose(q); return 0;
+			case 2: fclose(q); return 0;
+			case 3: fseek(q, 0, SEEK_END); int ret = ftell(q); fclose(q); return ret;
+			}
+		}
+		if ( seekn != 3 ) { return 0; }
 	}
 	return -1;
 }
@@ -187,6 +207,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		memcpy(vm_mem[newpid], vm_mem[curvm], PROG_SZ);
 		vmarr[newpid] = &vmarrx[newpid];
 		vm_uid[newpid] = vm_uid[curvm];
+		vm_pwd[newpid] = strdup(vm_pwd[curvm]);
 		//printf("FORK DONE\n");
 		fflush(stdout);
 		return newpid;
@@ -238,11 +259,11 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 		char *ptr = strchr(str, ' ');
 		if ( ptr ) *ptr = '\0';
 		uint16_t entrypoint = 0;
-	int ret = fscall(READ, 0, 2, "/0", str, &entrypoint);
+	int ret = fscall(READ, 0, 2, vm_pwd[curvm], str, &entrypoint);
 	if ( ret == -1 ) {
 		return -1;
 	}
-	ret = fscall(READ, 2, PROG_SZ, "/0", str, vm_mem[curvm]);
+	ret = fscall(READ, 2, PROG_SZ, vm_pwd[curvm], str, vm_mem[curvm]);
 	if ( ret == -1 ) {
 		return -1;
 	}
@@ -250,6 +271,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 	} else if ( funcid == 5 ) {
 		
 		vmarr[curvm] = NULL;
+		
 		free(vm_args[curvm]);
 	} else if ( funcid == 10 ) {
 
@@ -307,6 +329,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				vm_pipen[argv[2]] = 0;
 				vm_pipex[argv[2]] = 0;
 				vm_pipef[argv[2]] = 1;
+				vm_fpwd[newfd] = strdup(vm_pwd[curvm]);
 				break;
 			}
 			case 21: {
@@ -329,13 +352,57 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				vm_fact[newfd] = LS;
 				vm_pipen[argv[2]] = 0;
 				vm_pipex[argv[2]] = 0;
-
+				vm_fpwd[newfd] = strdup(vm_pwd[curvm]);
 				vm_pipef[argv[2]] = 1;
 				break;
 			}
 			case 20: {
 				return vm_pipef[argv[1]];
 				break;
+			}
+			case 33: {
+				vm_pipen[argv[1]] = 0; vm_pipex[argv[1]] = 0; return 0;
+			}
+			case 34: {
+				int thefd = -1;
+				for(thefd = 0; thefd < MAX_FILE; thefd++ ) {
+					if ( vm_fpipe[thefd] == argv[1] ) {
+						vm_fseek[thefd] = argv[2];
+					}
+				}
+				break;
+			}
+			case 36: {
+				
+				char *nptr = &vm_mem[curvm][argv[1]];
+				if ( nptr[0] != '/' && strstr(nptr, "..") == NULL) {
+					char *nbuf = malloc(strlen(vm_pwd[curvm])+strlen(nptr)+2);
+					sprintf(nbuf, "%s/%s", vm_pwd[curvm], nptr);
+					free(vm_pwd[curvm]);
+					vm_pwd[curvm] = nbuf;
+				} else if ( strstr(nptr, "..") != NULL ) {
+					
+					char *nbuf = strdup(vm_pwd[curvm]);free(vm_pwd[curvm]);
+					char *ptrq = strrchr(nbuf, '/'); *ptrq = '\0';
+					vm_pwd[curvm] = nbuf;
+					
+				} else {
+					free(vm_pwd[curvm]);
+					vm_pwd[curvm] = strdup(nptr);
+				}
+				break;
+			}
+			case 35: {
+				strcpy(&vm_mem[curvm][argv[1]], vm_pwd[curvm]); break;
+			}
+			case 37: {
+				int ret = fscall(INFO, argv[2], 0, vm_pwd[curvm], &vm_mem[curvm][argv[1]], NULL);
+				
+				return ret;
+			}
+			case 38: {
+				if (vm_uid[argv[1]] == vm_uid[curvm] || vm_uid[curvm] == 1) { vmarr[argv[1]] = NULL; return 1; }
+				return 0;
 			}
 			case 8: {
 				int thefd = -1;
@@ -368,6 +435,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 void setup(int argc, char **argv)
 {
 	vm_args[0] = strdup(argv[1]);
+	vm_pwd[0] = strdup("/0");
 	int q = 0;
 	for ( q = 0; q < MAX_PID; q++ ) {
 		vmarr[q] = NULL;
@@ -412,9 +480,10 @@ void loop()
 	//printf("Pipe left: %d\n", vm_pipen[vm_fpipe[n]]);
 	if ( vm_pipen[vm_fpipe[n]] == 0 && vm_fact[n] != WRITE ) {
 		vm_pipex[vm_fpipe[n]] = 0;
-		adder = fscall(vm_fact[n], vm_fseek[n], PIPE_BUF / 2, "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
+		adder = fscall(vm_fact[n], vm_fseek[n], PIPE_BUF / 2, vm_fpwd[n], vm_files[n], vm_pipes[vm_fpipe[n]]);
 		if ( adder == -1 ) {
 		free(vm_files[n]);
+		free(vm_fpwd[n]);
 		vm_files[n] = 0;
 		vm_fseek[n] = 0;
 		vm_fpipe[n] = 0;
@@ -425,7 +494,7 @@ void loop()
 	}
 	if ( vm_fact[n] == WRITE && vm_pipen[vm_fpipe[n]] > 0 ) {
 		vm_pipex[vm_fpipe[n]] = 0;
-		adder = fscall(vm_fact[n], vm_fseek[n], vm_pipen[vm_fpipe[n]], "/0", vm_files[n], vm_pipes[vm_fpipe[n]]);
+		adder = fscall(vm_fact[n], vm_fseek[n], vm_pipen[vm_fpipe[n]], vm_fpwd[n], vm_files[n], vm_pipes[vm_fpipe[n]]);
 		//printf("abc: %d\n", adder);
 		/*if ( adder == -1 ) {
 		free(vm_files[n]);

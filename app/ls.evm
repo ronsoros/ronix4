@@ -1,13 +1,45 @@
 $include "sdk/stdlib.evm"
 array8u buf[128];
+array8u buf2[64];
+array8u buf3[128];
 function main() {
-	local f, n;
-	if ( argc == 1 ) {
+	local f, n, o;
+	o = argv[1];
+	if ( argc == 1 || !strcmp(argv[1], "-l") ) {
 		argv[1] = string("");
 	}
+	if ( argc >= 3 ) {
+		argv[1] = argv[2];
+	}
+	
 	f = file_list(argv[1]);
+	
 	while(!eof(f)) {
 		fgets(f, &buf);
+		if ( argc >= 3 || !strcmp(o, "-l") ) {
+			if ( argc >= 3 ) {
+			strcpy(&buf3, argv[1]);
+			strcat(&buf3, "/");
+			strcat(&buf3, &buf);
+			} else {
+			strcpy(&buf3, &buf);
+			}
+			n = stat(&buf3, 1);
+			fputs(stdout, "r=");
+			fputint(stdout, n);
+			n = stat(&buf3, 2);
+			fputs(stdout, ",w=");
+			fputint(stdout, n);
+			fputs(stdout, " ");
+			n = stat(&buf3, 3);
+			if ( n > -1 ) {
+			itoa(n, &buf2);
+			fputs(stdout, &buf2);
+			} else {
+			fputs(stdout, "0");
+			}
+			fputs(stdout, " ");
+		}
 		fputs(stdout, &buf);
 		fputc(stdout, 10);
 	}

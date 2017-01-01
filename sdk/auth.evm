@@ -1,0 +1,20 @@
+// authentication functions
+
+function getuidbyname(uname) {
+	local newuid; newuid = 0;
+	f = file_list("/0/users");
+	while(!eof(f)) {
+		fgets(f, &ids);
+		strcpy(&path, "/0/users/");
+		strcat(&path, &ids);
+		strcat(&path, "/.uname");
+		f2 = open(&path, 0);
+		fgets(f2, &cmp);
+		if ( !strcmp(&uname, &cmp) ) {
+			newuid = atoi(&ids);
+		}
+		close(f2);
+	}
+	close(f);
+	return newuid;
+}

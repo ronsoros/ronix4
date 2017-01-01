@@ -35,7 +35,7 @@ function main() {
 		exit();
 	}
 	fputs(stdout, "Password: ");
-	fgets(stdin, &pwd);
+	fgetpwd(stdin, stdout, &pwd);
 	strcpy(&path, "/0/users/");
 	strcat(&path, &idsp);
 	strcat(&path, "/.passwd");
