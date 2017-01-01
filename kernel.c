@@ -8,7 +8,7 @@
 #define MAX_PIPE 8
 #define PIPE_BUF 64
 #define PROG_SZ 4096
-#define KERNEL_VER 402
+#define KERNEL_VER 409
 #define MAX_FS 8
 #define MAX_FILE 8
 #define UNUSED __attribute__((unused))
@@ -35,7 +35,7 @@ int freepipe() {
 	return -1;
 }
 enum fsact {
-	LS, RM, WRITE, READ, INFO
+	LS, RM, WRITE, READ, INFO, FREE
 };
 enum fsact vm_fact[MAX_FILE];
 typedef struct fsparsed {
@@ -101,6 +101,9 @@ newfsdriver(fs_default){
 		return ret;
 		}
 	}
+	if ( action == INFO && seekn == 4 ) {
+		return 32767;
+	}
 	if ( action == INFO ) {
 		FILE *q = fopen(path, "rt");
 		
@@ -113,6 +116,7 @@ newfsdriver(fs_default){
 		}
 		if ( seekn != 3 ) { return 0; }
 	}
+	
 	return -1;
 }
 #endif
@@ -136,7 +140,11 @@ struct fsparsed parsefs(char *pwd, char *path) {
 }
 int fscall(enum fsact action, int seekn, int len, char *pwd, char *name, char *buf) {
 	fsparsed parsed = parsefs(pwd, name);
+	if ( kfsdrv[parsed.driver] ) {
 	return (*kfsdrv[parsed.driver])(action, seekn, len, parsed.path, buf);
+	} else {
+	return -2;
+	}
 }
 int16_t mem_read(uint16_t addr, bool is16bit, void *ctx)
 {

@@ -1,0 +1,22 @@
+$include "sdk/stdlib.evm"
+global maxfs;
+array8u path[8];
+function main() {
+	local q, r;
+	maxfs = 8;
+	path[0] = char("/");
+	fputs(stdout, "id  free space`");
+	for ( q = 0; q < maxfs; q++ ) {
+		itoa(q, &path + 1);
+		r = stat(&path, 4);
+		fputint(stdout, q);
+		fputs(stdout, "  ");
+		if ( r != -2 ) {
+		fputint(stdout, r);
+		fputs(stdout, "KiB");
+		} else {
+		fputs(stdout, "(unmounted)");
+		}
+		fputc(stdout, 10);
+	}
+}
