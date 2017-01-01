@@ -44,6 +44,9 @@ function main() {
 	if ( !strcmp(&pwd, &cmp) ) {
 		setuid(selfpid(), newuid);
 		close(f2);
+		strcpy(&path, "/0/users/");
+		strcat(&path, &idsp);
+		chdir(&path);
 		exec("/0/bin/sh", "/0/bin/sh");
 	} else {
 		fputs(stdout, "Bad password.`");

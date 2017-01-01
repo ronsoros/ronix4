@@ -82,7 +82,11 @@ newfsdriver(fs_default){
 		}
 	}
 	if(action == WRITE) {
-		FILE *q = fopen(path, "at");
+		char mode[] = "wt";
+		if ( seekn > 0 ) {
+			mode[0] = 'a';
+		}
+		FILE *q = fopen(path, mode);
 		  fseek (q , 0 , SEEK_END);
   		int sz = ftell (q);
   		rewind (q);

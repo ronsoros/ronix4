@@ -10,11 +10,9 @@ function main() {
 	strcat(&strdat, "/.passwd");
 	fputs(stdout, "New password: ");
 	fgets(stdin, &newpass);
-	if ( getuid(selfpid()) == 1 ) {
+	
 		f = open(&strdat, 1);
 		fputs(f, &newpass);
 		close(f);
-	} else {
-		fputs(stdout, "Operation not permitted");
-	}
+
 }
