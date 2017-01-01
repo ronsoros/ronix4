@@ -1,2 +1,5 @@
-1
-2
+bin
+etc
+kernel.exe
+tmp.txt
+users
