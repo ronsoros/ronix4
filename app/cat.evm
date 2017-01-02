@@ -8,7 +8,7 @@ function main() {
 	}
 	f = open(argv[1], 0);
 	while(pipe_left(f) > 1) {
-		n = read(f, &buf, 128, -1);
+		n = read(f, &buf, 16, -1);
 		if ( n > 0 ) {
 		write(stdout, &buf, n);
 		}

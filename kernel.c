@@ -523,6 +523,13 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				return -32767;
 				}
 			}
+			case 48: {
+				if ( fsperm(vm_uid[curvm], 1, vm_pwd[curvm], &vm_mem[curvm][argv[1]]) ) {
+				return fscall(RM, argv[2], -1, vm_pwd[curvm], &vm_mem[curvm][argv[1]], NULL);
+				} else {
+				return -32767;
+				}
+			}
 			case 38: {
 				if (vm_uid[argv[1]] == vm_uid[curvm] || vm_uid[curvm] == 1) { vmarr[argv[1]] = NULL; return 1; }
 				return 0;

@@ -1,5 +1,2 @@
-bin
-etc
-kernel.exe
-tmp.txt
-users
+1
+2

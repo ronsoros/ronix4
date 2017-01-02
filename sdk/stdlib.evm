@@ -188,8 +188,12 @@ function getcwd(cbuf) {
 function stat(path, metric) {
 	return $uf12(37, path, metric);
 }
-
-
+function setstat(path, metric, value) {
+	return $uf12(47, path, metric, value);
+}
+function remove(path) {
+	return $uf12(48, path, -1);
+}
 function read(pipe, dest, len, maxtries) { // read from 'pipe' into 'dest' up to 'len' characters, retry 'maxtries' times
 	local r;
 	local tries;
