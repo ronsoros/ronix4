@@ -1,0 +1,12 @@
+$include "sdk/stdlib.evm"
+array8u key[] = "test";
+array8u val[] = "hello there";
+array8u va2[] = "bye";
+function main() {
+	setenv(&key, &val);
+	fputs(stdout, getenv(&key));
+	fputc(stdout, 10);
+	setenv(&key, &va2);
+	fputs(stdout, getenv(&key));
+	fputc(stdout, 10);
+}

@@ -47,6 +47,9 @@ function main() {
 		strcpy(&path, "/0/users/");
 		strcat(&path, &idsp);
 		chdir(&path);
+		setenv("HOME", &path);
+		setenv("USER", &uname);
+		setenv("ID", &idsp);
 		exec("/0/bin/sh", "/0/bin/sh");
 	} else {
 		fputs(stdout, "Bad password.`");

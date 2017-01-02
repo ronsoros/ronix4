@@ -1,6 +1,7 @@
 // The Ronsor Again Shell (Rash) (C) 2015, 2016, 2017 Ronsor.
-array8u text[128];
+array8u text3[128];
 array8u text2[128];
+array8u text4[128];
 $include "sdk/stdlib.evm"
 array16 arr[5];
 array8u user[32];
@@ -9,8 +10,86 @@ array8u uprompt[] = "$ ";
 array8u fullprompt[64];
 array8u path[64];
 array8u binprefix[64];
+array8u quot[2];
+global in_if;
+function docmd(text) {
+
+local tryfork, q, p, xx; tryfork = 1;
+quot[0] = 34;
+quot[1] = 0;
+if ( !strcmp(text, "endif") ) {
+	in_if = 0;
+	return 0;
+}
+if ( in_if ) {
+	return 0;
+}
+if ( !strcmp(text, "exit") ) {
+	fputs(stdout, "Exiting`");
+	exit();
+	}
+	strcpy(&text4, "");
+	strcpy(&text2, text);
+	xx = strarr(&arr, &text2, " ");
+	for ( p = 0; p < xx; p++ ) {
+		if ( $ptr8u[arr[p], 0] == char("$") ) {
+			if ( getenv(arr[p] + 1) ) {
+			arr[p] = getenv(arr[p] + 1);
+			} else {
+			arr[p] = string("");
+			}
+		}
+	}
+	for ( p = 0; p < xx; p++ ) {
+	strcat(&text4, &quot);
+	strcat(&text4, arr[p]);
+	strcat(&text4, &quot);
+	strcat(&text4, " ");
+	}
+	if(xx >= 2) {
+		if ( !strcmp(arr[0], "cd") ) {
+			chdir(arr[1]);
+			tryfork = 0;
+		}
+		if ( !strcmp(arr[0], "set") ) {
+			setenv(arr[1], arr[2]);
+			tryfork = 0;
+		}
+		if ( !strcmp(arr[0], "ifeq") ) {
+			if ( !strcmp(arr[1], arr[2]) ) {
+				in_if = 0;
+			} else {
+				in_if = 1;
+			}
+			tryfork = 0;
+		}
+		if ( !strcmp(arr[0], "read") ) {
+			setenv(arr[1], "");
+			fgets(stdin, getenv(arr[1]));
+			tryfork = 0;
+		}
+	}
+	if ( tryfork ) {
+	q = fork();
+	if ( q > 0 ) {
+		while ( !dead(q) ) { fwdio(q); }
+		
+	} else {
+		if ( exec(text, &text4) == -1 ) {
+		strcpy(&fullprompt, "/0/bin/");
+		strcat(&fullprompt, text);
+		if ( exec(&fullprompt, &text4) == -1 ) {
+		fputs(stdout, "Command not found`");
+		exit();
+		}
+		}
+	}
+	}
+}
 function main() {
 		local c, q, f, tryfork;
+	if ( argc == 1 ) {
+	in_if = 0;
 	itoa(getuid(selfpid()), &user);
 	if ( getuid(selfpid()) == 1 ) {
 	} else {
@@ -34,34 +113,16 @@ function main() {
 	strcat(&fullprompt, &path);
 	strcat(&fullprompt, &prompt);
 	fputs(stdout, &fullprompt);
-	fgets(stdin, &text);
-	if ( !strcmp(&text, "exit") ) {
-	fputs(stdout, "Exiting`");
-	exit();
+	fgets(stdin, &text3);
+	docmd(&text3);
 	}
-	strcpy(&text2, &text);
-	if(strarr(&arr, &text2, " ") >= 2) {
-		if ( !strcmp(arr[0], "cd") ) {
-			chdir(arr[1]);
-			tryfork = 0;
-		}
-		
-	}
-	if ( tryfork ) {
-	q = fork();
-	if ( q > 0 ) {
-		while ( !dead(q) ) { fwdio(q); }
-		
 	} else {
-		if ( exec(&text, &text) == -1 ) {
-		strcpy(&fullprompt, "/0/bin/");
-		strcat(&fullprompt, &text);
-		if ( exec(&fullprompt, &text) == -1 ) {
-		fputs(stdout, "Command not found`");
-		exit();
-		}
-		}
+	f = open(argv[1], 0);
+	while ( !eof(f) ) {
+		fgets(f, &text3);
+		//fputs(stdout, &text3);
+		docmd(&text3);	
 	}
-	}
+	close(f);
 	}
 }

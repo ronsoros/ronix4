@@ -9,10 +9,10 @@
 #define INPUTNOW getchar()
 #endif
 #define OUTPUTNOW(n) putchar(n)
-#define MAX_PID 32
+#define MAX_PID 8
 #define MAX_SOCK 16
-#define MAX_PIPE 64
-#define PIPE_BUF 128
+#define MAX_PIPE 16
+#define PIPE_BUF 16
 #define PROG_SZ 6144
 #define KERNEL_VER 411
 #define MAX_FS 8
@@ -246,6 +246,23 @@ int fsperm(int uid, int typwrite, char *pwd, char *name) {
 	if ( ret == uid ) { return 1; }
 	return 0;
 }
+int kernel_memory(int need_used) {
+	int n = 0;
+	int total = 0;
+	total = (MAX_PID * PROG_SZ) + ((MAX_PIPE + MAX_PID * 2) * PIPE_BUF) + (MAX_PID * sizeof(struct embedvm_s));
+	if ( !need_used ) {
+	return total;
+	} else {
+	int used = 0;
+	for ( n = 0; n < MAX_PID; n++ ) {
+	if ( vmarr[n] ) { used += PROG_SZ; used += sizeof(struct embedvm_s); }
+	}
+	for ( n = 0; n < (MAX_PIPE + MAX_PID * 2); n++ ) {
+	used += vm_pipen[n];
+	}
+	return used;
+	}
+}
 int16_t mem_read(uint16_t addr, bool is16bit, void *ctx)
 {
 	if (addr + (is16bit ? 1 : 0) >= sizeof(vm_mem[curvm]))
@@ -404,6 +421,36 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				//printf("Pipe empty: %d\n", vm_pipen[argv[1]]);
 				return vm_pipen[argv[1]] == 0; break;
 			}
+			case 97: {
+				#define VM_ENVSTART (sizeof(vm_mem[curvm]) - 512)
+				return sizeof(vm_mem[curvm]) - 512;
+			}
+			case 101: {
+				int z;
+				for ( z = 0; z < 128; z += 8 ) {
+					if (!strcmp(&vm_mem[curvm][argv[1]],&vm_mem[curvm][VM_ENVSTART + z])) {
+						return VM_ENVSTART + (128 + ((z/8)*24));
+					}
+				}
+				return 0;
+			}
+			case 102: {
+				int z;
+				for ( z = 0; z < 128; z += 8 ) {
+					if (!strcmp(&vm_mem[curvm][argv[1]],&vm_mem[curvm][VM_ENVSTART + z])) {
+						strcpy(&vm_mem[curvm][VM_ENVSTART + (128 + ((z/8)*24))], &vm_mem[curvm][argv[2]]);
+						return VM_ENVSTART + (128 + ((z/8)*24));
+					}
+				}
+				for ( z = 0; z < 128; z += 8 ) {
+					if (strlen(&vm_mem[curvm][VM_ENVSTART + z]) == 0) {
+						strcpy(&vm_mem[curvm][VM_ENVSTART + z], &vm_mem[curvm][argv[1]]);
+						strcpy(&vm_mem[curvm][VM_ENVSTART + (128 + ((z/8)*24))], &vm_mem[curvm][argv[2]]);
+						return VM_ENVSTART + (128 + ((z/8)*24));
+					}
+				}
+				return 0;
+			}
 			case 11: {
 				vm_pipeu[argv[1]] = 0; 
 				vm_pipef[argv[1]] = 0; break;
@@ -534,6 +581,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				if (vm_uid[argv[1]] == vm_uid[curvm] || vm_uid[curvm] == 1) { vmarr[argv[1]] = NULL; return 1; }
 				return 0;
 			}
+			case 96: { return (kernel_memory(argv[1])/1024); }
 			case 8: {
 				int thefd = -1;
 				for(thefd = 0; thefd < MAX_FILE; thefd++ ) {
@@ -590,8 +638,9 @@ void setup(int argc, char **argv)
 	}
 	struct embedvm_s* vm = vmarr[0];
 	vm->ip = entrypoint;
-	printf("Ronix kernel %d: loaded init. Jumping to entrypoint: 0x%04x.\n", KERNEL_VER, entrypoint);
-	vm->sp = vm->sfp = sizeof(vm_mem[curvm]);
+	printf("Ronix kernel %d: loaded init. Jumping to entrypoint: 0x%04x.\nTotal memory: %d bytes.\n", KERNEL_VER, entrypoint, kernel_memory(0));
+	vm->sp = vm->sfp = sizeof(vm_mem[curvm]) - 512;
+	memset(&vm_mem[curvm] + vm->sp, 512, 0);
 	vm->mem_read = &mem_read;
 	vm->mem_write = &mem_write;
 	vm->call_user = &call_user;

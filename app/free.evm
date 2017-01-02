@@ -1,0 +1,15 @@
+$include "sdk/stdlib.evm"
+
+function main(){
+	local total, used;
+	total = _kernel_free(0);
+	used = _kernel_free(1);
+	fputs(stdout, "----- Memory (KiB)`");
+	fputs(stdout, "Free  ");
+	fputint(stdout, total - used);
+	fputs(stdout, "`Used  ");
+	fputint(stdout, used);
+	fputs(stdout, "`Total ");
+	fputint(stdout, total);
+	fputs(stdout, "`");
+}

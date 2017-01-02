@@ -24,6 +24,12 @@ function _start() { // executable entrypoint
 	while ( !pipe_empty(stdout) ) {}
 	$uf5();
 }
+function setenv(key,val) {
+	return $uf12(102, key, val);
+}
+function getenv(key) {
+	return $uf12(101, key);
+}
 function char(c) {
 	return $ptr8u[c, 0];
 }
@@ -220,6 +226,9 @@ function fspermerror(n) {
 		fputs(stdout, "Permission denied.`");
 	}
 	return n;
+}
+function _kernel_free(n) {
+	return $uf12(96, n);
 }
 function reqparamex(n, info) {
 	if ( argc < n ) {
