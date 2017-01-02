@@ -3,7 +3,11 @@
 #include "embedvm.h"
 
 #define INPUTREADY _kbhit()
+#ifdef WIN32
 #define INPUTNOW _getche()
+#else
+#define INPUTNOW getchar()
+#endif
 #define OUTPUTNOW(n) putchar(n)
 #define MAX_PID 8
 #define MAX_SOCK 16
@@ -118,7 +122,7 @@ int kbhit() {
    register int ret;
    fd_set fds;
    terminal_lnbuf(0);
-   terminal_echo(0);
+ 
    struct timeval tv;
    tv.tv_sec = 0;
    tv.tv_usec = 0;
