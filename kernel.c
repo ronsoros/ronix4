@@ -159,11 +159,13 @@ newfsdriver(fs_default){
 	}
 	if(action == READ || action == LS) {
 		FILE *q = fopen(path, "rb");
+		if ( q ) {
 		  fseek (q , 0 , SEEK_END);
   		int sz = ftell (q);
   		rewind (q);
 		if ( seekn >= sz ) {
 			return -1;
+		}
 		}
 		//printf("path: %s\n", path);
 		if ( q ) {
