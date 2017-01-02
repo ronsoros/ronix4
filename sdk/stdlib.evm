@@ -12,6 +12,7 @@ function read(pipe, dest, len, maxtries);
 function selfpid();
 function strarr(array, string, delim);
 function strlen(str);
+function fputint(pipe, num);
 function pipe_empty(pipe);
 function _start() { // executable entrypoint
 	stdin = selfpid() * 2;
@@ -216,15 +217,24 @@ function fputs(pipe, str) { // fputs
 	}
 }
 function fgets(pipe, str) { // read line from 'pipe' into 'str'
-	local i, n;
+	local i, n, s;
 	n = 1;
-	
-	for(i=0; n; i++) {
+	s = 1;
+	$ptr8u[str, i] = fgetc(pipe);
+	if ( $ptr8u[str,i] == 10 ) {
+	s = 0;
+	}
+	for(i=s; n; i++) {
 		
 		$ptr8u[str, i] = fgetc(pipe);
 		if ( $ptr8u[str, i] == 10 || $ptr8u[str, i] == 13 ) {
+		
+		
+		
 		$ptr8u[str,i] = 0;
 		return i;
+	
+		
 		}
 	}
 	

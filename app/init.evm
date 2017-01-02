@@ -6,21 +6,13 @@ $include "sdk/stdlib.evm"
 function main() {
 	
 	local n, s, q, cstdin, cstdout;
-	_kernel_puts("Welcome to Ronsor!`");
+	fputs(stdout, "`Welcome to Ronix`");
 	s = fork();
 	cstdin = s * 2;
 	cstdout = s * 2 + 1;
 	if ( s > 0 ) {
 	while(1) {
-		if(read(cstdout, &buf, 1, 1)) {
-			_kernel_putc(buf[0]);
-		}
-		buf[0] = _kernel_getc();
-		if(buf[0] > 0) {
-		if(buf[0] == 13) { _kernel_putc(10); }
-		write(cstdin, &buf, 1);
-		}
-		//_kernel_putc(65);
+		fwdio(s);
 	}
 	} else {
 	exec("/0/bin/login", "");

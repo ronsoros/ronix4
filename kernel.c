@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include "embedvm.h"
 
-
+#define INPUTREADY _kbhit()
+#define INPUTNOW _getche()
+#define OUTPUTNOW(n) putchar(n)
 #define MAX_PID 8
 #define MAX_SOCK 16
 #define MAX_PIPE 8
@@ -152,7 +154,7 @@ newfsdriver(fs_default){
 		system(cmd);
 	}
 	if(action == READ || action == LS) {
-		FILE *q = fopen(path, "rt");
+		FILE *q = fopen(path, "rb");
 		  fseek (q , 0 , SEEK_END);
   		int sz = ftell (q);
   		rewind (q);
@@ -168,7 +170,7 @@ newfsdriver(fs_default){
 		}
 	}
 	if(action == WRITE) {
-		char mode[] = "wt";
+		char mode[] = "wb";
 		if ( seekn > 0 ) {
 			mode[0] = 'a';
 		}
@@ -276,15 +278,15 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 {
 	//printf("%d: Syscall: %d ( %d, %d )\n", curvm, funcid, argc > 0 ? argv[0] : -1, argc > 1 ? argv[1] : -1);
 	if ( funcid == 0 && argc == 1 ) {
-	if ( argv[0] == '`' ) {
+	/*if ( argv[0] == '`' ) {
 	putchar(10);
 	} else {
 	putchar(argv[0]);
-	}
+	}*/
 	} else if ( funcid == 1 ) {
-		if ( _kbhit() ) {
+		/*if ( _kbhit() ) {
 		return _getche();
-		}
+		}*/
 	} else if ( funcid == 2 ) {
 		char *sysinfodest = &vm_mem[curvm][argv[0]];
 		strcpy(sysinfodest, "Ronix");
@@ -558,7 +560,7 @@ void setup(int argc, char **argv)
 	}
 	struct embedvm_s* vm = vmarr[0];
 	vm->ip = entrypoint;
-	printf("Ronix kernel %d: loaded init. Jumping to entrypoint: 0x%04x.", KERNEL_VER, entrypoint);
+	printf("Ronix kernel %d: loaded init. Jumping to entrypoint: 0x%04x.\n", KERNEL_VER, entrypoint);
 	vm->sp = vm->sfp = sizeof(vm_mem[curvm]);
 	vm->mem_read = &mem_read;
 	vm->mem_write = &mem_write;
@@ -606,6 +608,15 @@ void loop()
 	}
 	}
 	}
+	if ( (vm_pipen[0] + vm_pipex[0] + 1) < PIPE_BUF && INPUTREADY ) {
+		vm_pipes[0][vm_pipen[0] + vm_pipex[0]] = INPUTNOW;
+		if ( vm_pipes[0][vm_pipen[0] + vm_pipex[0]] == 13 ) { OUTPUTNOW('\n'); }
+		vm_pipen[0] += 1;
+	}
+	for ( n = 0; n < vm_pipen[1]; n++ ) {
+		OUTPUTNOW(vm_pipes[1][n]);
+	}
+	vm_pipen[1] = 0;
 	for ( n = 0; n < MAX_PID; n++ ) {
 	if ( vmarr[n] != NULL ) {
 	curvm = n;
