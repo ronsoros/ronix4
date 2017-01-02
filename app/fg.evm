@@ -1,0 +1,7 @@
+$include "sdk/stdlib.evm"
+function main(){
+	reqparam("pid");
+	while ( !dead(atoi(argv[1])) ) {
+		fwdio(atoi(argv[1]));
+	}
+}	

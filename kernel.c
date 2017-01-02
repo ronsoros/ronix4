@@ -204,7 +204,7 @@ newfsdriver(fs_default){
 		if ( q ) {
 			switch(seekn) {
 			case 1: fclose(q); return 0;
-			case 2: fclose(q); return 0;
+			case 2: fclose(q); return 1;
 			case 3: fseek(q, 0, SEEK_END); int ret = ftell(q); fclose(q); return ret;
 			}
 		}

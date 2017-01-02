@@ -1,0 +1,6 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	reqparam("file");
+	fspermerror(remove(argv[1]));
+}

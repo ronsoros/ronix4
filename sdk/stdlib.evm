@@ -194,6 +194,43 @@ function setstat(path, metric, value) {
 function remove(path) {
 	return $uf12(48, path, -1);
 }
+function fputs(pipe, str) { // fputs
+	local i;
+	for ( i = 0; $ptr8u[str, i]; i++ ) {
+		if ( $ptr8u[str, i] != char("`") ) {
+		fputc(pipe, $ptr8u[str, i]);
+		} else {
+		fputc(pipe, 10);
+		}
+	}
+}
+function reqparam(info) {
+	if ( argc == 1 ) {
+		fputs(stdout, "Usage: ");
+		fputs(stdout, argv[0]);
+		fputs(stdout, " [");
+		fputs(stdout, info);
+		fputs(stdout, "]`");
+		exit();
+	}
+}
+function fspermerror(n) {
+
+	if ( n < 0 ) {
+		fputs(stdout, "Permission denied.`");
+	}
+	return n;
+}
+function reqparamex(n, info) {
+	if ( argc < n ) {
+		fputs(stdout, "Usage: ");
+		fputs(stdout, argv[0]);
+		fputs(stdout, " [");
+		fputs(stdout, info);
+		fputs(stdout, "]`");
+		exit();
+	}
+}
 function read(pipe, dest, len, maxtries) { // read from 'pipe' into 'dest' up to 'len' characters, retry 'maxtries' times
 	local r;
 	local tries;
@@ -210,16 +247,7 @@ function read(pipe, dest, len, maxtries) { // read from 'pipe' into 'dest' up to
 function write(pipe, src, len) { // write data from 'src' 'len' characters into 'pipe'
 	$uf9(pipe, src, len);
 }
-function fputs(pipe, str) { // fputs
-	local i;
-	for ( i = 0; $ptr8u[str, i]; i++ ) {
-		if ( $ptr8u[str, i] != char("`") ) {
-		fputc(pipe, $ptr8u[str, i]);
-		} else {
-		fputc(pipe, 10);
-		}
-	}
-}
+
 function fgets(pipe, str) { // read line from 'pipe' into 'str'
 	local i, n, s;
 	n = 1;

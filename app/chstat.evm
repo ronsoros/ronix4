@@ -1,0 +1,11 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	local mode;
+	mode = 1;
+	reqparamex(3, "r|w uid file");
+	if ( !strcmp(argv[1], "w") ) {
+	mode = 2;
+	}
+	fspermerror(setstat(argv[3], mode, atoi(argv[2])));
+}

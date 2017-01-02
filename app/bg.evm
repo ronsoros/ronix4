@@ -1,0 +1,13 @@
+$include "sdk/stdlib.evm"
+function main() {
+	local a, b;
+	reqparam("program");
+	a = fork();
+	if ( a == 0 ) {
+		exec(argv[1], argv[1]);
+	} else {
+	fputs(stdout, "PID: ");
+	fputint(stdout, a);
+	fputs(stdout, "`");
+	}
+}

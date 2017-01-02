@@ -1,0 +1,12 @@
+$include "sdk/stdlib.evm"
+$include "sdk/auth.evm"
+
+function main() {
+	reqparam("user");
+	setuid(selfpid(),getuidbyname(argv[1]));
+	if ( argc == 3 ) {
+	exec(argv[2], argv[2]);
+	} else {
+	exec("/0/bin/sh","/0/bin/sh");
+	}
+}
