@@ -9,12 +9,12 @@
 #define INPUTNOW getchar()
 #endif
 #define OUTPUTNOW(n) putchar(n)
-#define MAX_PID 8
+#define MAX_PID 32
 #define MAX_SOCK 16
-#define MAX_PIPE 8
-#define PIPE_BUF 64
-#define PROG_SZ 4096
-#define KERNEL_VER 409
+#define MAX_PIPE 64
+#define PIPE_BUF 128
+#define PROG_SZ 6144
+#define KERNEL_VER 411
 #define MAX_FS 8
 #define MAX_FILE 8
 #define UNUSED __attribute__((unused))
@@ -240,6 +240,12 @@ int fscall(enum fsact action, int seekn, int len, char *pwd, char *name, char *b
 	return -2;
 	}
 }
+int fsperm(int uid, int typwrite, char *pwd, char *name) {
+	int ret = fscall(INFO, typwrite + 1, -1, pwd, name, NULL);
+	if ( ret < 1 ) { return 1; }
+	if ( ret == uid ) { return 1; }
+	return 0;
+}
 int16_t mem_read(uint16_t addr, bool is16bit, void *ctx)
 {
 	if (addr + (is16bit ? 1 : 0) >= sizeof(vm_mem[curvm]))
@@ -426,6 +432,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				strcpy(&vm_mem[curvm][argv[1]], __DATE__ " " __TIME__); break;
 			}
 			case 7: {
+				if ( fsperm(vm_uid[curvm], argv[3], vm_pwd[curvm], &vm_mem[curvm][argv[1]]) ) {
 				int newfd = -1;
 				newfd = freefd();
 				vm_files[newfd] = strdup(&vm_mem[curvm][argv[1]]);
@@ -436,6 +443,9 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				vm_pipex[argv[2]] = 0;
 				vm_pipef[argv[2]] = 1;
 				vm_fpwd[newfd] = strdup(vm_pwd[curvm]);
+				} else {
+				return -1;
+				}
 				break;
 			}
 			case 21: {
@@ -502,9 +512,16 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 				strcpy(&vm_mem[curvm][argv[1]], vm_pwd[curvm]); break;
 			}
 			case 37: {
-				int ret = fscall(INFO, argv[2], 0, vm_pwd[curvm], &vm_mem[curvm][argv[1]], NULL);
+				int ret = fscall(INFO, argv[2], -1, vm_pwd[curvm], &vm_mem[curvm][argv[1]], NULL);
 				
 				return ret;
+			}
+			case 47: {
+				if ( fsperm(vm_uid[curvm], 1, vm_pwd[curvm], &vm_mem[curvm][argv[1]]) ) {
+				return fscall(INFO, argv[2], argv[3], vm_pwd[curvm], &vm_mem[curvm][argv[1]], NULL);
+				} else {
+				return -32767;
+				}
 			}
 			case 38: {
 				if (vm_uid[argv[1]] == vm_uid[curvm] || vm_uid[curvm] == 1) { vmarr[argv[1]] = NULL; return 1; }
