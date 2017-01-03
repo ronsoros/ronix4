@@ -443,7 +443,7 @@ int16_t call_user(uint8_t funcid, uint8_t argc, int16_t *argv, void *ctx)
 					}
 				}
 				for ( z = 0; z < 128; z += 8 ) {
-					if (strlen(&vm_mem[curvm][VM_ENVSTART + z]) == 0) {
+					if (strlen(&vm_mem[curvm][VM_ENVSTART + z]) == 0 || strlen(&vm_mem[curvm][VM_ENVSTART + (128 + ((z/8)*24))]) == 0) {
 						strcpy(&vm_mem[curvm][VM_ENVSTART + z], &vm_mem[curvm][argv[1]]);
 						strcpy(&vm_mem[curvm][VM_ENVSTART + (128 + ((z/8)*24))], &vm_mem[curvm][argv[2]]);
 						return VM_ENVSTART + (128 + ((z/8)*24));
