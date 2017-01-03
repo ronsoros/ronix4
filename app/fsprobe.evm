@@ -1,0 +1,16 @@
+$include "sdk/stdlib.evm"
+function testprobe(metric, ok, name) {
+	fputs(stdout, name);
+	fputs(stdout, ": ");
+	if ( stat(argv[1], metric) == ok ) {
+		fputs(stdout, "supported`");
+	} else {
+		fputs(stdout, "unsupported`");
+	}
+}
+function main() {
+	fputs(stdout, "Shows information on filesystem.");
+	reqparam("/id");
+	testprobe(5, 1, "mkdir");
+	testprobe(4, 1, "filesystem size");
+}

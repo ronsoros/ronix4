@@ -1,0 +1,6 @@
+$include "sdk/stdlib.evm"
+
+function main() {
+	reqparam("dir");
+	fspermerror(setstat(argv[1], 5, 1));
+}

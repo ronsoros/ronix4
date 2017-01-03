@@ -13,7 +13,7 @@ function main() {
 		fputs(stdout, "  ");
 		if ( r != -2 ) {
 		fputint(stdout, r);
-		fputs(stdout, "KiB");
+		fputs(stdout, "MiB");
 		} else {
 		fputs(stdout, "(unmounted)");
 		}

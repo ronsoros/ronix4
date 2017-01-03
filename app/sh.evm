@@ -4,6 +4,7 @@ array8u text2[128];
 array8u text4[128];
 $include "sdk/stdlib.evm"
 array16 arr[5];
+array16 dest[2];
 array8u user[32];
 array8u prompt[] = "# ";
 array8u uprompt[] = "$ ";
@@ -12,13 +13,23 @@ array8u path[64];
 array8u binprefix[64];
 array8u quot[2];
 global in_if;
+global ostdout;
 function docmd(text) {
-
-local tryfork, q, p, xx; tryfork = 1;
+local nd, tryfork, q, p, xx;
+nd = strarr(&dest, text, ">");
+if ( nd > 1 ) {
+	ostdout = stdout;
+	stdout = open(dest[1], 1);
+}
+ tryfork = 1;
 quot[0] = 34;
 quot[1] = 0;
 if ( !strcmp(text, "endif") ) {
 	in_if = 0;
+	return 0;
+}
+if ( !strcmp(text, "else") ) {
+	in_if = !in_if;
 	return 0;
 }
 if ( in_if ) {
@@ -63,6 +74,22 @@ if ( !strcmp(text, "exit") ) {
 			}
 			tryfork = 0;
 		}
+		if ( !strcmp(arr[0], "ifgt") ) {
+			if ( atoi(arr[1]) > atoi(arr[2]) ) {
+				in_if = 0;
+			} else {
+				in_if = 1;
+			}
+			tryfork = 0;
+		}
+		if ( !strcmp(arr[0], "iflt") ) {
+			if ( atoi(arr[1]) < atoi(arr[2]) ) {
+				in_if = 0;
+			} else {
+				in_if = 1;
+			}
+			tryfork = 0;
+		}
 		if ( !strcmp(arr[0], "read") ) {
 			setenv(arr[1], "");
 			fgets(stdin, getenv(arr[1]));
@@ -84,6 +111,10 @@ if ( !strcmp(text, "exit") ) {
 		}
 		}
 	}
+	}
+	if ( nd > 1 ) {
+		close(stdout);
+		stdout = ostdout;
 	}
 }
 function main() {
